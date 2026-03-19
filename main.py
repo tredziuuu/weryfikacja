@@ -1,94 +1,64 @@
-import random
+import os
 import discord
 from discord.ext import commands
-from discord import app_commands
+from discord.ui import View, Button
 
-TOKEN = "TWÓJ_TOKEN"
-ROLE_ID = 1483018446055669852  # ID roli do nadania
+TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.default()
-intents.message_content = True
 intents.members = True
+intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-
-# ------------------------------
-#  KOMENDA /verify – panel
-# ------------------------------
-@bot.tree.command(name="verify", description="Wyświetla panel weryfikacyjny")
-async def verify(interaction: discord.Interaction):
-
-    button = discord.ui.Button(
-        label="Zweryfikuj się",
-        style=discord.ButtonStyle.success,
-        custom_id="start_verify"
-    )
-
-    view = discord.ui.View()
-    view.add_item(button)
-
-    await interaction.response.send_message(
-        "🔐 **Kliknij aby zweryfikować**",
-        view=view
-    )
+VERIFY_CHANNEL_ID = 1484204843588653079   # ID kanału weryfikacji
+ROLE_ID = 1483018446055669852           # ID roli do nadania
 
 
-# ------------------------------
-#  OBSŁUGA PRZYCISKU
-# ------------------------------
-@bot.event
-async def on_interaction(interaction: discord.Interaction):
-    if interaction.type != discord.InteractionType.component:
-        return
+class VerifyButton(View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    if interaction.data.get("custom_id") == "start_verify":
+    @discord.ui.button(label="Zweryfikuj się", style=discord.ButtonStyle.green)
+    async def verify(self, interaction: discord.Interaction, button: Button):
+        role = interaction.guild.get_role(ROLE_ID)
 
-        # Generowanie działania
-        a = random.randint(1, 10)
-        b = random.randint(1, 10)
-        correct = a + b
-
-        await interaction.response.send_message(
-            f"Aby się zweryfikować, odpowiedz ile to: **{a} + {b}**",
-            ephemeral=True
-        )
-
-        def check(msg):
-            return msg.author.id == interaction.user.id
-
-        try:
-            msg = await bot.wait_for("message", timeout=15, check=check)
-
-            if msg.content.isdigit() and int(msg.content) == correct:
-                role = interaction.guild.get_role(ROLE_ID)
-                member = interaction.guild.get_member(interaction.user.id)
-
-                await member.add_roles(role)
-                await interaction.followup.send(
-                    "✔ Zweryfikowano! Rola została nadana.",
-                    ephemeral=True
-                )
-            else:
-                await interaction.followup.send(
-                    "❌ Zła odpowiedź. Kliknij przycisk ponownie.",
-                    ephemeral=True
-                )
-
-        except:
-            await interaction.followup.send(
-                "⏳ Minął czas. Kliknij przycisk ponownie.",
-                ephemeral=True
+        if role is None:
+            return await interaction.response.send_message(
+                "Nie mogę znaleźć roli do nadania.", ephemeral=True
             )
 
+        try:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message(
+                f"Zweryfikowano pomyślnie, {interaction.user.mention}!", ephemeral=True
+            )
+        except Exception as e:
+            await interaction.response.send_message(
+                "Wystąpił błąd przy nadawaniu roli.", ephemeral=True
+            )
+            print(e)
 
-# ------------------------------
-#  SYNC KOMEND
-# ------------------------------
+
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
-    print(f"Zalogowano jako {bot.user}")
+    print(f"Bot zalogowany jako {bot.user}")
+
+
+@bot.command()
+async def sendverify(ctx):
+    """Wysyła embed z przyciskiem weryfikacji"""
+    if ctx.channel.id != VERIFY_CHANNEL_ID:
+        return await ctx.send("Użyj tej komendy na kanale weryfikacji.")
+
+    embed = discord.Embed(
+        title="Weryfikacja",
+        description="Kliknij przycisk poniżej, aby się zweryfikować.",
+        color=discord.Color.green()
+    )
+
+    await ctx.send(embed=embed, view=VerifyButton())
 
 
 bot.run(TOKEN)
+
