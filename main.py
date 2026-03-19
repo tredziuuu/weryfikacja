@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Button
 
-TOKEN = os.getenv("MTQ4NDE5NDU1OTMxNDYyODYwOA.GTow4h.Ep-wh1esv913oTzZ9NgwfNrywhn-QlBgJAUNAE")
+TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.default()
 intents.members = True
@@ -60,5 +60,5 @@ async def sendverify(ctx):
     await ctx.send(embed=embed, view=VerifyButton())
 
 
-bot.run("MTQ4NDE5NDU1OTMxNDYyODYwOA.GTow4h.Ep-wh1esv913oTzZ9NgwfNrywhn-QlBgJAUNAE")
+bot.run(TOKEN)
 
